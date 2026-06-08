@@ -1,0 +1,205 @@
+// This is your Prisma schema file,
+generator client {
+  provider      = "prisma-client-js"
+  output        = "../generated/prisma"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Auth models
+
+model User {
+
+  id         String         @id @default(uuid())
+
+  email      String         @unique
+
+  name       String?
+
+  createdAt  DateTime       @default(now())
+
+  updatedAt  DateTime       @updatedAt @default(now())
+
+  identities UserIdentity[]
+
+  patients   Patient[]
+
+  isDeleted  Boolean?       @default(false)
+
+
+
+  @@index([email])
+
+}
+
+
+
+model UserIdentity {
+
+  id         String   @id @default(uuid())
+
+  userId     String
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  provider   String // 'Google', 'GitHub', 'EmailPassword', 'PhoneOTP', etc.
+
+  providerId String // Provider's unique user ID (or email for email/password)
+
+  metadata   Json? // Provider-specific data (passwordHash, tokens, profile data, etc.)
+
+  createdAt  DateTime @default(now())
+
+  updatedAt  DateTime @updatedAt
+
+  isDeleted  Boolean? @default(false)
+
+
+
+  @@unique([provider, providerId])
+
+  @@index([userId])
+
+}
+
+
+
+model Otp {
+
+  id         String   @id @default(uuid())
+
+  identifier String   // Phone number or email address
+
+  type       String   // 'phone' or 'email'
+
+  otp        String   // Hashed OTP
+
+  expiresAt  DateTime
+
+  attempts   Int      @default(0)
+
+  verified   Boolean  @default(false)
+
+  purpose    String?  // 'login', 'registration', 'password_reset', '2fa', etc.
+
+  createdAt  DateTime @default(now())
+
+  updatedAt  DateTime @updatedAt
+
+  isDeleted  Boolean? @default(false)
+
+
+
+  @@index([identifier, type])
+
+  @@index([expiresAt])
+
+  @@index([identifier, type, verified])
+
+}
+
+
+
+model Patient {
+
+  id                  Int          @id @default(autoincrement())
+
+  doctorId            String
+
+  doctor              User         @relation(fields: [doctorId], references: [id])
+
+  name                String?
+
+  age                 Int?
+
+  gender              String?
+
+  bloodPressure       Float?
+
+  bloodGlucose        Float?
+
+  bloodUrea           Float?
+
+  serumCreatinine     Float?
+
+  sodium              Float?
+
+  potassium           Float?
+
+  hemoglobin          Float?
+
+  packedCellVolume    Float?
+
+  whiteBloodCellCount Float?
+
+  redBloodCellCount   Float?
+
+  albumin             String?
+
+  sugar               String?
+
+  hypertension        Boolean?
+
+  diabetesMellitus    Boolean?
+
+  coronaryArteryDisease Boolean?
+
+  appetite            String?
+
+  pedalEdema          Boolean?
+
+  anemia              Boolean?
+
+  predictions         Prediction[]
+
+  createdAt           DateTime     @default(now())
+
+  updatedAt           DateTime     @updatedAt
+
+  isDeleted           Boolean      @default(false)
+
+
+
+  @@index([doctorId])
+
+}
+
+
+
+model Prediction {
+
+  id                  Int      @id @default(autoincrement())
+
+  patientId           Int
+
+  patient             Patient  @relation(fields: [patientId], references: [id])
+
+  riskScore           Float    // Percentage
+
+  ckdRisk             String   // Yes/No
+
+  dialysisProbability Float    // Percentage
+
+  riskCategory        String   // Low, Medium, High
+
+  suggestedAction     String?
+
+  featureImportance   Json?    // Store feature importance values
+
+  inputData           Json?    // Store the input data snapshot used for this prediction
+
+  createdAt           DateTime @default(now())
+
+  updatedAt           DateTime @updatedAt
+
+  isDeleted           Boolean  @default(false)
+
+
+
+  @@index([patientId])
+
+}
